@@ -4,9 +4,12 @@ from sqlalchemy import create_engine
 import urllib.parse
 from streamlit_autorefresh import st_autorefresh
 
+# 자동 새로고침 (5초마다)
+count = st_autorefresh(interval = 5000, key = "datarefresh")
+
 # 연결엔진
 user = "root"
-password = "qwezxc123456@"
+password = ""
 safe_password = urllib.parse.quote_plus(password)
 host = "localhost"
 port = "3306"
@@ -14,6 +17,44 @@ db_name = "yongin_card_usage"
 
 
 engine = create_engine(f"mysql+pymysql://{user}:{safe_password}@{host}:{port}/{db_name}")
+
+
+# 데이터 전처리
+hour_mapping = {
+        "00:00 ~ 06:59": 1,
+        "07:00 ~ 08:59": 2,
+        "09:00 ~ 10:59": 3,
+        "11:00 ~ 12:59": 4,
+        "13:00 ~ 14:59": 5,
+        "15:00 ~ 16:59": 6,
+        "17:00 ~ 18:59": 7,
+        "19:00 ~ 20:59": 8,
+        "21:00 ~ 22:59": 9,
+        "23:00 ~ 23:59": 10
+    }
+
+age_mapping = {
+        "10~19세" : 2,
+        "20~29세" : 3, 
+        "30~39세" : 4, 
+        "40~49세" : 5, 
+        "50~59세" : 6, 
+        "60~69세" : 7, 
+        "70~79세" : 8, 
+        "80~89세" : 9, 
+        "90~99세" : 10
+    }
+
+day_mapping = {
+        "월요일" : 1,
+        "화요일" : 2,
+        "수요일" : 3,
+        "목요일" : 4,
+        "금요일" : 5,
+        "토요일" : 6,
+        "일요일" : 7
+    }
+
 
 # 대시보드 제목 및 설명
 st.title("💳 경기도 용인시 카드 소비 현황")
@@ -55,41 +96,6 @@ day_option = st.sidebar.selectbox(
     ("전체", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일")
 )
 
-# 데이터 전처리
-hour_mapping = {
-        "00:00 ~ 06:59": 1,
-        "07:00 ~ 08:59": 2,
-        "09:00 ~ 10:59": 3,
-        "11:00 ~ 12:59": 4,
-        "13:00 ~ 14:59": 5,
-        "15:00 ~ 16:59": 6,
-        "17:00 ~ 18:59": 7,
-        "19:00 ~ 20:59": 8,
-        "21:00 ~ 22:59": 9,
-        "23:00 ~ 23:59": 10
-    }
-
-age_mapping = {
-        "10~19세" : 2,
-        "20~29세" : 3, 
-        "30~39세" : 4, 
-        "40~49세" : 5, 
-        "50~59세" : 6, 
-        "60~69세" : 7, 
-        "70~79세" : 8, 
-        "80~89세" : 9, 
-        "90~99세" : 10
-    }
-
-day_mapping = {
-        "월요일" : 1,
-        "화요일" : 2,
-        "수요일" : 3,
-        "목요일" : 4,
-        "금요일" : 5,
-        "토요일" : 6,
-        "일요일" : 7
-    }
 
 # SQL 쿼리 작성 (사용자 선택에 따라 동적으로 변함)
 query = "select sum(amt) as total_amt, sum(cnt) as total_cnt from yongin_card_usage_11 where 1 = 1"
@@ -109,11 +115,7 @@ if day_option != "전체" :
     query += f" and _day = '{day_number}'"
 
 
-
-
-
-
-# 데이터 불러오기 및 표시
+# DB에서 데이터 가져오기
 try:
     df_result = pd.read_sql(query, engine)
     total_usage = df_result['total_amt'][0]
@@ -128,10 +130,8 @@ try:
     
     
     st.metric(label = "총 소비 금액", value = f"{total_usage :,.0f} 원")
-    st.metric(label = "총 결제 횟수", value = f"{total_count} 번")
+    st.metric(label = "총 결제 횟수", value = f"{total_count :,.0f} 번")
 
 except Exception as e:
-    st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {e}")
+    st.error(f"해당 조건에 맞는 소비 내역이 없습니다: {e}")
 
-
-count = st_autorefresh(interval = 5000, key = "datarefresh")
